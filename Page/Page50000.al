@@ -4,6 +4,7 @@ page 50000 "Source Parameters"
     ApplicationArea = All;
     UsageCategory = Administration;
     SourceTable = "Source Parameters";
+    SourceTableView = sorting (Code) order(descending);
 
     layout
     {
@@ -67,7 +68,7 @@ page 50000 "Source Parameters"
                 trigger OnAction()
                 begin
                     if "FSp RestMethod" = "FSp RestMethod"::GET then
-                        Connect2ShipStation()
+                        GetOrdersFromShipStation()
                     else
                         Message('Rest Method %1 can`t testing', Format("FSp RestMethod"));
                 end;

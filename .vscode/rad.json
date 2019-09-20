@@ -1,1 +1,1 @@
-﻿{"Added":[],"Modified":[{"Id":50002,"Kind":10,"Name":"Source Parameters","PackagePath":"/src/Table/Table50002.al"}],"Removed":[]}
+﻿{"Added":[{"Id":50001,"Kind":11,"Name":"Upgrade Mgt.","PackagePath":"/src/Codeunit/Cod50000.al"},{"Id":50000,"Kind":12,"Name":"Source Parameters","PackagePath":"/src/Page/Page50000.al"}],"Modified":[{"Id":50002,"Kind":10,"Name":"Source Parameters","PackagePath":"/src/Table/Table50002.al"}],"Removed":[]}
