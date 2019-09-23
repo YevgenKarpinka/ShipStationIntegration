@@ -66,9 +66,35 @@ page 50000 "Source Parameters"
                 CaptionML = ENU = 'Test Connection', RUS = 'Тестовое подключение';
 
                 trigger OnAction()
+                var
+                    ShipStationMgt: Codeunit "ShipStation Mgt.";
+                    jsObj: JsonObject;
+                    jsObjSub: JsonObject;
+                    jsArr: JsonArray;
+                    i: Integer;
+                    txtTest: Text;
                 begin
+
+                    // for i := 1 to 3 do begin
+                    //     Clear(jsObjSub);
+                    //     jsObjSub.Add('volume', 23);
+                    //     jsObjSub.Add('units', 'grams');
+                    //     Clear(jsObj);
+                    //     jsObj.Add('name', 'sdhfksd');
+                    //     jsObj.Add('nameID', '123123');
+                    //     jsObj.Add('weight', jsObjSub);
+                    //     jsArr.Add(jsObj);
+                    // end;
+                    // Clear(jsObj);
+                    // jsObj.Add('owner', 'Hlkkjlk');
+                    // jsObj.Add('shipto', 'Ssdsad');
+                    // jsObj.Add('items', jsArr);
+                    // jsObj.WriteTo(txtTest);
+                    // Message(txtTest);
+                    // exit;
+
                     if "FSp RestMethod" = "FSp RestMethod"::GET then
-                        GetOrdersFromShipStation()
+                        ShipStationMgt.GetOrdersFromShipStation()
                     else
                         Message('Rest Method %1 can`t testing', Format("FSp RestMethod"));
                 end;

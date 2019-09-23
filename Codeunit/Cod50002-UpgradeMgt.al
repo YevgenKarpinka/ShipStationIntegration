@@ -1,4 +1,4 @@
-codeunit 50001 "Upgrade Mgt."
+codeunit 50002 "Upgrade Mgt."
 {
     Subtype = Upgrade;
 

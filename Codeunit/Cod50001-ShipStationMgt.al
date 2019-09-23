@@ -1,92 +1,6 @@
-table 50002 "Source Parameters"
+codeunit 50001 "ShipStation Mgt."
 {
-    DataClassification = ToBeClassified;
-    CaptionML = ENU = 'Source Parameters', RUS = 'Параметры подключения';
-
-    fields
-    {
-        field(1; Code; Code[20])
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'Code', RUS = 'Код';
-        }
-        field(2; "FSp RestMethod"; Option)
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp RestMethod', RUS = 'FSp RestMethod';
-            OptionMembers = GET,POST;
-            OptionCaptionML = ENU = 'GET,POST', RUS = 'GET,POST';
-        }
-        field(3; "FSp URL"; Text[200])
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp URL', RUS = 'FSp URL';
-        }
-        field(4; "FSp Accept"; Code[20])
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp Accept', RUS = 'FSp Accept';
-        }
-        field(5; "FSp AuthorizationFrameworkType"; Option)
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp Authorization Framework Type', RUS = 'FSp Authorization Framework Type';
-            OptionMembers = " ",BasicHTTP,OAuth2;
-            OptionCaptionML = ENU = ' ,Basic HTTP,OAuth2', RUS = ' ,Basic HTTP,OAuth2';
-        }
-        field(6; "FSp AuthorizationToken"; Text[200])
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp Authorization Token', RUS = 'FSp Authorization Token';
-        }
-        field(7; "FSp UserName"; Text[100])
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp UserName', RUS = 'FSp UserName';
-        }
-        field(8; "FSp Password"; Text[100])
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp Password', RUS = 'FSp Password';
-        }
-        field(9; "FSp ContentType"; Option)
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp ContentType', RUS = 'FSp ContentType';
-            OptionMembers = " ","application/json";
-            OptionCaptionML = ENU = ' ,application/json', RUS = ' ,application/json';
-        }
-        field(10; "FSp ETag"; Text[100])
-        {
-            DataClassification = ToBeClassified;
-            CaptionML = ENU = 'FSp E-Tag', RUS = 'FSp E-Tag';
-        }
-    }
-
-    keys
-    {
-        key(PK; Code)
-        {
-            Clustered = true;
-        }
-    }
-
-    trigger OnInsert()
-    begin
-
-    end;
-
-    trigger OnModify()
-    begin
-
-    end;
-
-    trigger OnDelete()
-    begin
-
-    end;
-
-    trigger OnRename()
+    trigger OnRun()
     begin
 
     end;
@@ -103,9 +17,8 @@ table 50002 "Source Parameters"
         JSText: Text;
     begin
         if SPCode <> '' then
-            Rec.Get(SPCode);
+            if not SourceParameters.Get(SPCode) then Error('Need valid Source Parameter Code.\Source Parameter Code = % not valid', SPCode);
 
-        SourceParameters := Rec;
         RequestMessage.Method := Format(SourceParameters."FSp RestMethod");
         RequestMessage.SetRequestUri(SourceParameters."FSp URL");
         RequestMessage.GetHeaders(Headers);
@@ -123,17 +36,16 @@ table 50002 "Source Parameters"
 
         Headers.Add('If-Match', SourceParameters."FSp ETag");
 
-        if "FSp RestMethod" = "FSp RestMethod"::POST then begin
+        if SourceParameters."FSp RestMethod" = SourceParameters."FSp RestMethod"::POST then begin
             Content.WriteFrom(TextForRequest);
             RequestMessage.Content := Content;
 
             Content.GetHeaders(Headers);
-            if "FSp ContentType" <> 0 then begin
+            if SourceParameters."FSp ContentType" <> 0 then begin
                 Headers.Remove('Content-Type');
                 Headers.Add('Content-Type', Format(SourceParameters."FSp ContentType"));
             end;
         end;
-
 
         Client.Send(RequestMessage, ResponseMessage);
         Content := ResponseMessage.Content;
@@ -185,23 +97,124 @@ table 50002 "Source Parameters"
         _SH: Record "Sales Header";
         JSText: Text;
         JSObjectHeader: JsonObject;
-        JSObjectLine: JsonObject;
         OrdersJSArray: JsonArray;
-        txtBillTo: Text;
         txtAwaitingShipment: Label 'awaiting_shipment';
     begin
-        if (DocNo = '') or (not _SH.Get(_SH."Document Type"::Order, DocNo)) then exit(false);
+        testMode := true;
 
-        JSObjectLine.Add('billTo', _SH."Sell-to Customer Name");
-        JSObjectLine.WriteTo(txtBillTo);
-        Clear(JSObjectLine);
+        if (DocNo = '') or (not _SH.Get(_SH."Document Type"::Order, DocNo)) then exit(false);
 
         JSObjectHeader.Add('orderNumber', _SH."No.");
         JSObjectHeader.Add('orderDate', Date2Text4JSON(_SH."Posting Date"));
         JSObjectHeader.Add('orderStatus', txtAwaitingShipment);
-        JSObjectHeader.Add('billTo', txtBillTo);
+        JSObjectHeader.Add('billTo', jsonBillToFromSH(_SH."No."));
+        JSObjectHeader.Add('shipTo', jsonShipToFromSH(_SH."No."));
+        JSObjectHeader.Add('items', jsonItemsFromSL(_SH."No."));
+        JSObjectHeader.Add('tagIds', '');
+        JSObjectHeader.Add('userId', '');
+        JSObjectHeader.Add('externallyFulfilled', false);
+        JSObjectHeader.Add('externallyFulfilledBy', '');
+        JSObjectHeader.WriteTo(JSText);
+        if testMode then
+            Message(JSText)
+        else
+            Connect2ShipStation('', JSText);
 
+    end;
 
+    procedure jsonBillToFromSH(DocNo: Code[20]): JsonObject
+    var
+        JSObjectLine: JsonObject;
+        txtBillTo: Text;
+        _SH: Record "Sales Header";
+        _Cust: Record Customer;
+    begin
+        _SH.Get(_SH."Document Type"::Order, DocNo);
+        _Cust.Get(_SH."Bill-to Customer No.");
+        JSObjectLine.Add('billTo', _Cust.Name);
+        JSObjectLine.Add('company', '');
+        JSObjectLine.Add('street1', '');
+        JSObjectLine.Add('street2', '');
+        JSObjectLine.Add('street3', '');
+        JSObjectLine.Add('city', '');
+        JSObjectLine.Add('state', '');
+        JSObjectLine.Add('postalCode', '');
+        JSObjectLine.Add('country', '');
+        JSObjectLine.Add('phone', '');
+        JSObjectLine.Add('residential', '');
+        // JSObjectLine.WriteTo(txtBillTo);
+        exit(JSObjectLine);
+    end;
+
+    procedure jsonShipToFromSH(DocNo: Code[20]): JsonObject
+    var
+        JSObjectLine: JsonObject;
+        txtShipTo: Text;
+        _SH: Record "Sales Header";
+        _Cust: Record Customer;
+    begin
+        _SH.Get(_SH."Document Type"::Order, DocNo);
+        _Cust.Get(_SH."Sell-to Customer No.");
+        JSObjectLine.Add('billTo', _SH."Sell-to Customer Name");
+        JSObjectLine.Add('company', '');
+        JSObjectLine.Add('street1', _SH."Ship-to Address");
+        JSObjectLine.Add('street2', '');
+        JSObjectLine.Add('street3', '');
+        JSObjectLine.Add('city', _SH."Ship-to City");
+        JSObjectLine.Add('state', '');
+        JSObjectLine.Add('postalCode', _SH."Ship-to Post Code");
+        JSObjectLine.Add('country', _SH."Ship-to Country/Region Code");
+        JSObjectLine.Add('phone', _Cust."Phone No.");
+        JSObjectLine.Add('residential', false);
+        // JSObjectLine.WriteTo(txtShipTo);
+        exit(JSObjectLine);
+    end;
+
+    procedure jsonItemsFromSL(DocNo: Code[20]): JsonArray
+    var
+        JSObjectLine: JsonObject;
+        JSObjectArray: JsonArray;
+        txtItem: Text;
+        _SL: Record "Sales Line";
+    begin
+        _SL.SetRange("Document Type", _SL."Document Type"::Order);
+        _SL.SetRange("Document No.", DocNo);
+        _SL.SetRange(Type, _SL.Type::Item);
+        _SL.SetFilter(Quantity, '<>%1', 0);
+        if _SL.FindSet(false, false) then
+            repeat
+                Clear(JSObjectLine);
+                JSObjectLine.Add('orderItemId', _SL."Line No.");
+                JSObjectLine.Add('lineItemKey', _SL."No.");
+                JSObjectLine.Add('sku', '');
+                JSObjectLine.Add('name', _SL.Description);
+                JSObjectLine.Add('imageUrl', '');
+                JSObjectLine.Add('weight', jsonWeightFromItem(_SL."No."));
+                JSObjectLine.Add('quantity', _SL.Quantity);
+                JSObjectLine.Add('unitPrice', _SL."Unit Price");
+                JSObjectLine.Add('taxAmount', _SL."Amount Including VAT" - _SL.Amount);
+                JSObjectLine.Add('shippingAmount', 0);
+                JSObjectLine.Add('warehouseLocation', _SL."Location Code");
+                JSObjectLine.Add('productId', _SL."No.");
+                JSObjectLine.Add('fulfillmentSku', '');
+                JSObjectLine.Add('adjustment', '');
+                JSObjectArray.Add(JSObjectLine);
+            until _SL.Next() = 0;
+        // JSObjectArray.WriteTo(txtItem);
+        exit(JSObjectArray);
+    end;
+
+    procedure jsonWeightFromItem(ItemNo: Code[20]): JsonObject
+    var
+        JSObjectLine: JsonObject;
+        txtWeight: Text;
+        _Item: Record Item;
+    begin
+        _Item.Get(ItemNo);
+        JSObjectLine.Add('value', _Item."Gross Weight");
+        JSObjectLine.Add('units', 'grams');
+        // JSObjectLine.WriteTo(txtWeight);
+        exit(JSObjectLine);
     end;
 
     procedure GetJSToken(_JSONObject: JsonObject; TokenKey: Text) _JSONToken: JsonToken
@@ -210,7 +223,7 @@ table 50002 "Source Parameters"
             Error('Could not find a token with key %1', TokenKey);
     end;
 
-    procedure SelectJSToken(_JSONObject: JsonObject; Path: Text) _JSONToken: JsonToken;
+    procedure SelectJSToken(_JSONObject: JsonObject; Path: Text) _JSONToken: JsonToken
     begin
         if not _JSONObject.SelectToken(Path, _JSONToken) then
             Error('Could not find a token with path %1', Path);
@@ -239,4 +252,7 @@ table 50002 "Source Parameters"
         EVALUATE(Year, Format(Date2DMY(_Date, 3)));
         EXIT(Year + '-' + Month + '-' + Day + 'T00:00:00.0000000');
     end;
+
+    var
+        testMode: Boolean;
 }
