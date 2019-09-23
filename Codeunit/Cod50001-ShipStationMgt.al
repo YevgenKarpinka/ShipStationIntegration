@@ -5,6 +5,11 @@ codeunit 50001 "ShipStation Mgt."
 
     end;
 
+    procedure SetTestMode(_testMode: Boolean)
+    begin
+        testMode := _testMode;
+    end;
+
     procedure Connect2ShipStation(SPCode: code[20]; TextForRequest: Text): Text
     var
         TempBlob: Record TempBlob;
@@ -100,8 +105,6 @@ codeunit 50001 "ShipStation Mgt."
         OrdersJSArray: JsonArray;
         txtAwaitingShipment: Label 'awaiting_shipment';
     begin
-        testMode := true;
-
         if (DocNo = '') or (not _SH.Get(_SH."Document Type"::Order, DocNo)) then exit(false);
 
         JSObjectHeader.Add('orderNumber', _SH."No.");
@@ -113,6 +116,61 @@ codeunit 50001 "ShipStation Mgt."
         JSObjectHeader.Add('tagIds', '');
         JSObjectHeader.Add('userId', '');
         JSObjectHeader.Add('externallyFulfilled', false);
+        JSObjectHeader.Add('externallyFulfilledBy', '');
+        JSObjectHeader.WriteTo(JSText);
+        if testMode then
+            Message(JSText)
+        else
+            Connect2ShipStation('', JSText);
+
+    end;
+
+    procedure CreateLabel2OrderInShipStation(DocNo: Code[20]): Boolean
+    var
+        _SH: Record "Sales Header";
+        JSText: Text;
+        txtOrders: Text;
+        JSObject: JsonObject;
+        JSObjectHeader: JsonObject;
+        OrdersJSArray: JsonArray;
+        OrderJSToken: JsonToken;
+        Counter: Integer;
+        txtTest: Label '{"orders":[{"orderId":987654321,"orderNumber":"Test-International-API-DOCS","orderKey":"Test-International-API-DOCS","orderDate":"2015-06-28T17:46:27.0000000","createDate":"2015-08-17T09:24:14.7800000","modifyDate":"2015-08-17T09:24:16.4800000","paymentDate":"2015-06-28T17:46:27.0000000","shipByDate":"2015-07-05T00:00:00.0000000","orderStatus":"awaiting_shipment","customerId":63310475,"customerUsername":"sholmes1854@methodsofdetection.com","customerEmail":"sholmes1854@methodsofdetection.com","billTo":{"name":"SherlockHolmes","company":{},"street1":{},"street2":{},"street3":{},"city":{},"state":{},"postalCode":{},"country":{},"phone":{},"residential":{},"addressVerified":{}},"shipTo":{"name":"SherlockHolmes","company":"","street1":"221BBakerSt","street2":"","street3":{},"city":"London","state":"","postalCode":"NW16XE","country":"GB","phone":{},"residential":true,"addressVerified":"Addressnotyetvalidated"},"items":[{"orderItemId":136282568,"lineItemKey":{},"sku":"Ele-1234","name":"ElementaryDisguiseKit","imageUrl":{},"weight":{"value":12,"units":"ounces"},"quantity":2,"unitPrice":49.99,"taxAmount":{},"shippingAmount":{},"warehouseLocation":"Aisle1,Bin7","options":[],"productId":11780610,"fulfillmentSku":"Ele-1234","adjustment":false,"upc":{},"createDate":"2015-08-17T09:24:14.78","modifyDate":"2015-08-17T09:24:14.78"},{"orderItemId":136282569,"lineItemKey":{},"sku":"CN-9876","name":"FineWhiteOakCane","imageUrl":{},"weight":{"value":80,"units":"ounces"},"quantity":1,"unitPrice":225,"taxAmount":{},"shippingAmount":{},"warehouseLocation":"Aisle7,Bin34","options":[],"productId":11780609,"fulfillmentSku":{},"adjustment":false,"upc":{},"createDate":"2015-08-17T09:24:14.78","modifyDate":"2015-08-17T09:24:14.78"}],"orderTotal":387.97,"amountPaid":412.97,"taxAmount":27.99,"shippingAmount":35,"customerNotes":"Pleasebecarefulwhenpackingthedisguisekitsinwiththecane.","internalNotes":"Mr.Holmescalledtoupgradehisshippingtoexpedited","gift":false,"giftMessage":{},"paymentMethod":{},"requestedShippingService":"PriorityMailInt","carrierCode":"stamps_com","serviceCode":"usps_priority_mail_international","packageCode":"package","confirmation":"delivery","shipDate":"2015-04-25","holdUntilDate":{},"weight":{"value":104,"units":"ounces"},"dimensions":{"units":"inches","length":40,"width":7,"height":5},"insuranceOptions":{"provider":{},"insureShipment":false,"insuredValue":0},"internationalOptions":{"contents":"merchandise","customsItems":[{"customsItemId":11558268,"description":"FineWhiteOakCane","quantity":1,"value":225,"harmonizedTariffCode":{},"countryOfOrigin":"US"},{"customsItemId":11558267,"description":"ElementaryDisguiseKit","quantity":2,"value":49.99,"harmonizedTariffCode":{},"countryOfOrigin":"US"}],"nonDelivery":"return_to_sender"},"advancedOptions":{"warehouseId":98765,"nonMachinable":false,"saturdayDelivery":false,"containsAlcohol":false,"mergedOrSplit":false,"mergedIds":[],"parentId":{},"storeId":12345,"customField1":"SKU:CN-9876x1","customField2":"SKU:Ele-123x2","customField3":{},"source":{},"billToParty":{},"billToAccount":{},"billToPostalCode":{},"billToCountryCode":{}},"tagIds":{},"userId":{},"externallyFulfilled":false,"externallyFulfilledBy":{}},{"orderId":123456789,"orderNumber":"TEST-ORDER-API-DOCS","orderKey":"0f6bec18-9-4771-83aa-f392d84f4c74","orderDate":"2015-06-29T08:46:27.0000000","createDate":"2015-07-16T14:00:34.8230000","modifyDate":"2015-08-17T09:21:59.4430000","paymentDate":"2015-06-29T08:46:27.0000000","shipByDate":"2015-07-05T00:00:00.0000000","orderStatus":"awaiting_shipment","customerId":37701499,"customerUsername":"headhoncho@whitehouse.gov","customerEmail":"headhoncho@whitehouse.gov","billTo":{"name":"ThePresident","company":{},"street1":{},"street2":{},"street3":{},"city":{},"state":{},"postalCode":{},"country":{},"phone":{},"residential":{},"addressVerified":{}},"shipTo":{"name":"ThePresident","company":"USGovt","street1":"1600PennsylvaniaAve","street2":"OvalOffice","street3":{},"city":"Washington","state":"DC","postalCode":"20500","country":"US","phone":"555-555-5555","residential":false,"addressVerified":"Addressvalidationwarning"},"items":[{"orderItemId":128836912,"lineItemKey":"vd08-MSLbtx","sku":"ABC123","name":"Testitem#1","imageUrl":{},"weight":{"value":24,"units":"ounces"},"quantity":2,"unitPrice":99.99,"taxAmount":{},"shippingAmount":{},"warehouseLocation":"Aisle1,Bin7","options":[{"name":"Size","value":"Large"}],"productId":7239919,"fulfillmentSku":{},"adjustment":false,"upc":{},"createDate":"2015-07-16T14:00:34.823","modifyDate":"2015-07-16T14:00:34.823"},{"orderItemId":128836913,"lineItemKey":{},"sku":"DISCOUNTCODE","name":"10%OFF","imageUrl":{},"weight":{"value":0,"units":"ounces"},"quantity":1,"unitPrice":-20.55,"taxAmount":{},"shippingAmount":{},"warehouseLocation":{},"options":[],"productId":{},"fulfillmentSku":{},"adjustment":true,"upc":{},"createDate":"2015-07-16T14:00:34.823","modifyDate":"2015-07-16T14:00:34.823"}],"orderTotal":194.43,"amountPaid":218.73,"taxAmount":5,"shippingAmount":10,"customerNotes":"Pleaseshipassoonaspossible!","internalNotes":"Customercalledandwouldliketoupgradeshipping","gift":true,"giftMessage":"Thankyou!","paymentMethod":"CreditCard","requestedShippingService":"PriorityMail","carrierCode":"fedex","serviceCode":"fedex_home_delivery","packageCode":"package","confirmation":"delivery","shipDate":"2015-07-02","holdUntilDate":{},"weight":{"value":48,"units":"ounces"},"dimensions":{"units":"inches","length":7,"width":5,"height":6},"insuranceOptions":{"provider":"carrier","insureShipment":true,"insuredValue":200},"internationalOptions":{"contents":{},"customsItems":{},"nonDelivery":{}},"advancedOptions":{"warehouseId":98765,"nonMachinable":false,"saturdayDelivery":false,"containsAlcohol":false,"mergedOrSplit":false,"mergedIds":[],"parentId":{},"storeId":12345,"customField1":"Customdatathatyoucanaddtoanorder.SeeCustomField#2&#3formoreinfo!","customField2":"PerUIsettings,thisinformationcanappearonsomecarriersshippinglabels.Seelinkbelow","customField3":"https://help.shipstation.com/hc/en-us/articles/206639957","source":"Webstore","billToParty":{},"billToAccount":{},"billToPostalCode":{},"billToCountryCode":{}},"tagIds":{},"userId":{},"externallyFulfilled":false,"externallyFulfilledBy":{}}],"total":2,"page":1,"pages":0}';
+    begin
+        if (DocNo = '') or (not _SH.Get(_SH."Document Type"::Order, DocNo)) then exit(false);
+
+        // Get Order from Shipstation to Fill Variables
+        JSText := Connect2ShipStation('GETORDERS', '');
+        JSObject.ReadFrom(JSText);
+        OrdersJSArray := GetJSToken(JSObject, 'orders').AsArray();
+        for Counter := 0 to OrdersJSArray.Count - 1 do begin
+            OrdersJSArray.Get(Counter, OrderJSToken);
+            JSObject := OrderJSToken.AsObject();
+            txtOrders := GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
+            if txtOrders = DocNo then begin
+                // Fill Token from Order
+                JSObjectHeader.Add('orderId', GetJSToken(JSObject, 'orderId').AsValue().AsText());
+                JSObjectHeader.Add('carrierCode', GetJSToken(JSObject, 'carrierCode').AsValue().AsText());
+                JSObjectHeader.Add('serviceCode', GetJSToken(JSObject, 'serviceCode').AsValue().AsText());
+                JSObjectHeader.Add('packageCode', GetJSToken(JSObject, 'packageCode').AsValue().AsText());
+                JSObjectHeader.Add('confirmation', GetJSToken(JSObject, 'confirmation').AsValue().AsToken());
+                JSObjectHeader.Add('shipDate', GetJSToken(JSObject, 'shipDate').AsValue().AsText());
+                JSObjectHeader.Add('weight', GetJSToken(JSObject, 'weight').AsValue().AsToken());
+                JSObjectHeader.Add('dimensions', GetJSToken(JSObject, 'dimensions').AsValue().AsToken());
+                JSObjectHeader.Add('insuranceOptions', GetJSToken(JSObject, 'insuranceOptions').AsValue().AsToken());
+                JSObjectHeader.Add('internationalOptions', GetJSToken(JSObject, 'internationalOptions').AsValue().AsToken());
+                JSObjectHeader.Add('advancedOptions', GetJSToken(JSObject, 'advancedOptions').AsValue().AsToken());
+                JSObjectHeader.Add('testLabel', false);
+                JSObjectHeader.WriteTo(JSText);
+                if testMode then
+                    Message(JSText)
+                else
+                    // Create Label to Order
+                    Connect2ShipStation('CREATELABEL', JSText);
+            end;
+
+        end;
+
         JSObjectHeader.Add('externallyFulfilledBy', '');
         JSObjectHeader.WriteTo(JSText);
         if testMode then

@@ -1,4 +1,4 @@
-pageextension 50000 "Sales Order List Ext." extends "Sales Order List"
+pageextension 50003 "Sales Order List Ext." extends "Sales Order List"
 {
     layout
     {
@@ -29,6 +29,7 @@ pageextension 50000 "Sales Order List Ext." extends "Sales Order List"
                         _SH: Record "Sales Header";
                     begin
                         CurrPage.SetSelectionFilter(_SH);
+                        ShipStationMgt.SetTestMode(true);
                         if _SH.FindSet(false, false) then
                             repeat
                                 ShipStationMgt.CreateOrderInShipStation(_SH."No.");
@@ -43,9 +44,12 @@ pageextension 50000 "Sales Order List Ext." extends "Sales Order List"
                         _SH: Record "Sales Header";
                     begin
                         CurrPage.SetSelectionFilter(_SH);
+                        ShipStationMgt.SetTestMode(true);
                         if _SH.FindSet(false, false) then
                             repeat
-                            // ShipStationMgt.CreateLabel2OrderInShipStation(_SH."No.");
+                                // ShipStationMgt.CreateLabel2OrderInShipStation(_SH."No.");
+                                // Order no = 'Test-International-API-DOCS'
+                                ShipStationMgt.CreateLabel2OrderInShipStation('Test-International-API-DOCS');
                             until _SH.Next() = 0;
                     end;
                 }
