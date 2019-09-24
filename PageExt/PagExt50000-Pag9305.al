@@ -8,12 +8,17 @@ pageextension 50003 "Sales Order List Ext." extends "Sales Order List"
     actions
     {
         // Add changes to page actions here
-        addafter(Warehouse)
+        addbefore("F&unctions")
         {
             group(ShipStation)
             {
+                Image = ReleaseShipment;
+
                 action("Get Orders")
                 {
+                    ApplicationArea = All;
+                    Image = OrderList;
+
                     trigger OnAction()
                     var
                         ShipStationMgt: Codeunit "ShipStation Mgt.";
@@ -23,6 +28,9 @@ pageextension 50003 "Sales Order List Ext." extends "Sales Order List"
                 }
                 action("Create Orders")
                 {
+                    ApplicationArea = All;
+                    Image = CreateDocuments;
+
                     trigger OnAction()
                     var
                         ShipStationMgt: Codeunit "ShipStation Mgt.";
@@ -38,6 +46,9 @@ pageextension 50003 "Sales Order List Ext." extends "Sales Order List"
                 }
                 action("Create Label to Orders")
                 {
+                    ApplicationArea = All;
+                    Image = PrintReport;
+
                     trigger OnAction()
                     var
                         ShipStationMgt: Codeunit "ShipStation Mgt.";
@@ -48,8 +59,8 @@ pageextension 50003 "Sales Order List Ext." extends "Sales Order List"
                         if _SH.FindSet(false, false) then
                             repeat
                                 // ShipStationMgt.CreateLabel2OrderInShipStation(_SH."No.");
-                                // Order no = 'Test-International-API-DOCS'
-                                ShipStationMgt.CreateLabel2OrderInShipStation('Test-International-API-DOCS');
+                                // Order no = 'Test-International'
+                                ShipStationMgt.CreateLabel2OrderInShipStation('Test-International');
                             until _SH.Next() = 0;
                     end;
                 }

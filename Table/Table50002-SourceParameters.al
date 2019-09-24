@@ -61,6 +61,12 @@ table 50002 "Source Parameters"
             DataClassification = ToBeClassified;
             CaptionML = ENU = 'FSp E-Tag', RUS = 'FSp E-Tag';
         }
+        field(11; "FSp Event"; Option)
+        {
+            CaptionML = ENU = 'FSp Event', RUS = 'FSp Событие';
+            OptionMembers = " ",getOrder,createOrder,crateLabel;
+            OptionCaptionML = ENU = ' ,get Order,create Order,crate Label', RUS = ' ,получить Ордер,создать Ордер,создать Метку';
+        }
     }
 
     keys

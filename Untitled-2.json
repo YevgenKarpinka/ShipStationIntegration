@@ -1,0 +1,64 @@
+{
+    "orderId": "987654321",
+    "carrierCode": "stamps_com",
+    "serviceCode": "usps_priority_mail_international",
+    "packageCode": "package",
+    "confirmation": "delivery",
+    "shipDate": "2015-04-25",
+    "weight": {
+        "value": 104,
+        "units": "ounces"
+    },
+    "dimensions": {
+        "units": "inches",
+        "length": 40,
+        "width": 7,
+        "height": 5
+    },
+    "insuranceOptions": {
+        "provider": {},
+        "insureShipment": false,
+        "insuredValue": 0
+    },
+    "internationalOptions": {
+        "contents": "merchandise",
+        "customsItems": [
+            {
+                "customsItemId": 11558268,
+                "description": "FineWhiteOakCane",
+                "quantity": 1,
+                "value": 225,
+                "harmonizedTariffCode": {},
+                "countryOfOrigin": "US"
+            },
+            {
+                "customsItemId": 11558267,
+                "description": "ElementaryDisguiseKit",
+                "quantity": 2,
+                "value": 49.99,
+                "harmonizedTariffCode": {},
+                "countryOfOrigin": "US"
+            }
+        ],
+        "nonDelivery": "return_to_sender"
+    },
+    "advancedOptions": {
+        "warehouseId": 98765,
+        "nonMachinable": false,
+        "saturdayDelivery": false,
+        "containsAlcohol": false,
+        "mergedOrSplit": false,
+        "mergedIds": [],
+        "parentId": {},
+        "storeId": 12345,
+        "customField1": "SKU:CN-9876x1",
+        "customField2": "SKU:Ele-123x2",
+        "customField3": {},
+        "source": {},
+        "billToParty": {},
+        "billToAccount": {},
+        "billToPostalCode": {},
+        "billToCountryCode": {}
+    },
+    "testLabel": false
+}
