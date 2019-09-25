@@ -16,11 +16,13 @@ table 50002 "Source Parameters"
             CaptionML = ENU = 'FSp RestMethod', RUS = 'FSp RestMethod';
             OptionMembers = GET,POST;
             OptionCaptionML = ENU = 'GET,POST', RUS = 'GET,POST';
+            NotBlank = true;
         }
         field(3; "FSp URL"; Text[200])
         {
             DataClassification = ToBeClassified;
             CaptionML = ENU = 'FSp URL', RUS = 'FSp URL';
+            NotBlank = true;
         }
         field(4; "FSp Accept"; Code[20])
         {
@@ -33,6 +35,7 @@ table 50002 "Source Parameters"
             CaptionML = ENU = 'FSp Authorization Framework Type', RUS = 'FSp Authorization Framework Type';
             OptionMembers = " ",BasicHTTP,OAuth2;
             OptionCaptionML = ENU = ' ,Basic HTTP,OAuth2', RUS = ' ,Basic HTTP,OAuth2';
+            NotBlank = true;
         }
         field(6; "FSp AuthorizationToken"; Text[200])
         {
@@ -43,11 +46,13 @@ table 50002 "Source Parameters"
         {
             DataClassification = ToBeClassified;
             CaptionML = ENU = 'FSp UserName', RUS = 'FSp UserName';
+            NotBlank = true;
         }
         field(8; "FSp Password"; Text[100])
         {
             DataClassification = ToBeClassified;
             CaptionML = ENU = 'FSp Password', RUS = 'FSp Password';
+            NotBlank = true;
         }
         field(9; "FSp ContentType"; Option)
         {
@@ -66,6 +71,12 @@ table 50002 "Source Parameters"
             CaptionML = ENU = 'FSp Event', RUS = 'FSp Событие';
             OptionMembers = " ",getOrder,createOrder,crateLabel;
             OptionCaptionML = ENU = ' ,get Order,create Order,crate Label', RUS = ' ,получить Ордер,создать Ордер,создать Метку';
+            NotBlank = true;
+        }
+        field(12; "HTTP Status Ok"; Integer)
+        {
+            CaptionML = ENU = 'HTTP Status Ok', RUS = 'HTTP Статус Ok';
+            NotBlank = true;
         }
     }
 

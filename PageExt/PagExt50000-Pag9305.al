@@ -35,13 +35,20 @@ pageextension 50003 "Sales Order List Ext." extends "Sales Order List"
                     var
                         ShipStationMgt: Codeunit "ShipStation Mgt.";
                         _SH: Record "Sales Header";
+                        lblOrdersList: TextConst ENU = 'Orders List:', RUS = 'Список Заказов:';
+                        txtOrdersList: Text;
                     begin
                         CurrPage.SetSelectionFilter(_SH);
                         ShipStationMgt.SetTestMode(true);
                         if _SH.FindSet(false, false) then
                             repeat
                                 ShipStationMgt.CreateOrderInShipStation(_SH."No.");
+                                if txtOrdersList = '' then
+                                    txtOrdersList := _SH."No."
+                                else
+                                    txtOrdersList += '\' + _SH."No.";
                             until _SH.Next() = 0;
+                        Message('%1 \%2', lblOrdersList, txtOrdersList);
                     end;
                 }
                 action("Create Label to Orders")

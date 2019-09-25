@@ -12,6 +12,10 @@ page 50000 "Source Parameters"
         {
             repeater(RepeaterName)
             {
+                field("FSp Event"; "FSp Event")
+                {
+                    ApplicationArea = All;
+                }
                 field(Code; Code)
                 {
                     ApplicationArea = All;
