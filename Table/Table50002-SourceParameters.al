@@ -76,7 +76,6 @@ table 50002 "Source Parameters"
         field(12; "HTTP Status Ok"; Integer)
         {
             CaptionML = ENU = 'HTTP Status Ok', RUS = 'HTTP Статус Ok';
-            NotBlank = true;
         }
     }
 

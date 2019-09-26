@@ -1,51 +1,6 @@
 {
-  "orderNumber": "S-ORD101001",
-  "orderDate": "2019-04-02T00:00:00.0000000",
-  "orderStatus": "awaiting_shipment",
-  "billTo": {
-    "name": "Adatum Corporation",
-    "company": "",
-    "street1": "",
-    "street2": "",
-    "street3": "",
-    "city": "",
-    "state": "",
-    "postalCode": "",
-    "country": "",
-    "phone": "",
-    "residential": ""
-  },
-  "shipTo": {
-    "name": "Adatum Corporation",
-    "company": "",
-    "street1": "192 Market Square",
-    "street2": "",
-    "street3": "",
-    "city": "Atlanta",
-    "state": "",
-    "postalCode": "31772",
-    "country": "US",
-    "phone": "",
-    "residential": false
-  },
-  "items": [
-    {
-      "lineItemKey": 10000,
-      "sku": "1996-S",
-      "name": "ATLANTA Whiteboard, base",
-      "imageUrl": "",
-      "weight": {
-        "value": 80.27,
-        "units": "grams"
-      },
-      "quantity": 0,
-      "unitPrice": 1397.3,
-      "taxAmount": 1006.06,
-      "warehouseLocation": "",
-      "productId": 10000,
-      "fulfillmentSku": "",
-      "adjustment": false
-    }
-  ],
-  "tagIds": []
+  "Message": "The request entity's media type 'text/plain' is not supported for this resource.",
+  "ExceptionMessage": "No MediaTypeFormatter is available to read an object of type 'Order' from content with media type 'text/plain'.",
+  "ExceptionType": "System.Net.Http.UnsupportedMediaTypeException",
+  "StackTrace": "   at System.Net.Http.HttpContentExtensions.ReadAsAsync[T](HttpContent content, Type type, IEnumerable`1 formatters, IFormatterLogger formatterLogger, CancellationToken cancellationToken)\r\n   at System.Net.Http.HttpContentExtensions.ReadAsAsync(HttpContent content, Type type, IEnumerable`1 formatters, IFormatterLogger formatterLogger, CancellationToken cancellationToken)\r\n   at System.Web.Http.ModelBinding.FormatterParameterBinding.ReadContentAsync(HttpRequestMessage request, Type type, IEnumerable`1 formatters, IFormatterLogger formatterLogger, CancellationToken cancellationToken)"
 }

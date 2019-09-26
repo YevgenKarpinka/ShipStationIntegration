@@ -10,14 +10,13 @@ codeunit 50001 "ShipStation Mgt."
         testMode := _testMode;
     end;
 
-    procedure Connect2ShipStation(SPCode: Option " ",getOrder,createOrder,crateLabel; TextForRequest: Text): Text
+    procedure Connect2ShipStation(SPCode: Option " ",getOrder,createOrder,crateLabel; Body2Request: Text): Text
     var
         TempBlob: Record TempBlob;
         SourceParameters: Record "Source Parameters";
         RequestMessage: HttpRequestMessage;
         ResponseMessage: HttpResponseMessage;
         Headers: HttpHeaders;
-        Content: HttpContent;
         Client: HttpClient;
         JSText: Text;
     begin
@@ -44,10 +43,8 @@ codeunit 50001 "ShipStation Mgt."
         Headers.Add('If-Match', SourceParameters."FSp ETag");
 
         if SourceParameters."FSp RestMethod" = SourceParameters."FSp RestMethod"::POST then begin
-            Content.WriteFrom(TextForRequest);
-            RequestMessage.Content := Content;
-
-            Content.GetHeaders(Headers);
+            RequestMessage.Content.WriteFrom(Body2Request);
+            RequestMessage.Content.GetHeaders(Headers);
             if SourceParameters."FSp ContentType" <> 0 then begin
                 Headers.Remove('Content-Type');
                 Headers.Add('Content-Type', Format(SourceParameters."FSp ContentType"));
@@ -55,32 +52,13 @@ codeunit 50001 "ShipStation Mgt."
         end;
 
         Client.Send(RequestMessage, ResponseMessage);
+        If not ResponseMessage.IsSuccessStatusCode() then begin
+            Error('Web service returned error:\\' + 'Status code: %1\' + 'Description: %2',
+                ResponseMessage.HttpStatusCode(), ResponseMessage.ReasonPhrase());
+        end;
 
-        Content := ResponseMessage.Content;
-        if Content.ReadAs(JSText) then
-            if testMode then
-                if ResponseMessage.HttpStatusCode = SourceParameters."HTTP Status Ok" then begin
-                    Message('Response Message Http Status Code = %1\Response Message Content:\%2', Format(ResponseMessage.HttpStatusCode), JSText);
-                    exit(JSText);
-                end else begin
-                    ErrorHandling(JSText);
-                    exit('');
-                end
-            else
-                if not (ResponseMessage.HttpStatusCode = 200) then
-                    ErrorHandling(JSText);
-    end;
-
-    local procedure ErrorHandling(_JSText: Text)
-    var
-        JSObject: JsonObject;
-        errMessage: Text;
-        errExceptionMessage: Text;
-    begin
-        JSObject.ReadFrom(_JSText);
-        errMessage := GetJSToken(JSObject, 'Message').AsValue().AsText();
-        errExceptionMessage := GetJSToken(JSObject, 'ExceptionMessage').AsValue().AsText();
-        Message('Response Message: %1\Response Exception Message: %2', errMessage, errExceptionMessage);
+        ResponseMessage.Content().ReadAs(JSText);
+        exit(JSText);
     end;
 
     procedure GetOrdersFromShipStation(): Text
@@ -143,9 +121,6 @@ codeunit 50001 "ShipStation Mgt."
         JSObjectHeader.Add('items', jsonItemsFromSL(_SH."No."));
         Clear(OrdersJSArray);
         JSObjectHeader.Add('tagIds', OrdersJSArray);
-        // JSObjectHeader.Add('userId', '');
-        // JSObjectHeader.Add('externallyFulfilled', false);
-        // JSObjectHeader.Add('externallyFulfilledBy', '');
         JSObjectHeader.WriteTo(JSText);
 
         if testMode then begin
@@ -160,12 +135,17 @@ codeunit 50001 "ShipStation Mgt."
     var
         _SH: Record "Sales Header";
         JSText: Text;
-        txtOrders: Text;
+        txtOrderNo: Text;
         JSObject: JsonObject;
-        JSObjectHeader: JsonObject;
+        jsLabelObject: JsonObject;
         OrdersJSArray: JsonArray;
         OrderJSToken: JsonToken;
         Counter: Integer;
+        notExistOrdersList: Text;
+        OrdersListCreateLabel: Text;
+        OrdersCancelled: Text;
+        txtLabel: Text;
+        constOrderCancelled: TextConst ENU = 'cancelled', RUS = 'cancelled';
         txtTest: Label '{"orders":[{"orderId":987654321,"orderNumber":"TEST-INTERNATIONAL","orderKey":"Test-International-API-DOCS","orderDate":"2015-06-28T17:46:27.0000000","createDate":"2015-08-17T09:24:14.7800000","modifyDate":"2015-08-17T09:24:16.4800000","paymentDate":"2015-06-28T17:46:27.0000000","shipByDate":"2015-07-05T00:00:00.0000000","orderStatus":"awaiting_shipment","customerId":63310475,"customerUsername":"sholmes1854@methodsofdetection.com","customerEmail":"sholmes1854@methodsofdetection.com","billTo":{"name":"SherlockHolmes","company":{},"street1":{},"street2":{},"street3":{},"city":{},"state":{},"postalCode":{},"country":{},"phone":{},"residential":{},"addressVerified":{}},"shipTo":{"name":"SherlockHolmes","company":"","street1":"221BBakerSt","street2":"","street3":{},"city":"London","state":"","postalCode":"NW16XE","country":"GB","phone":{},"residential":true,"addressVerified":"Addressnotyetvalidated"},"items":[{"orderItemId":136282568,"lineItemKey":{},"sku":"Ele-1234","name":"ElementaryDisguiseKit","imageUrl":{},"weight":{"value":12,"units":"ounces"},"quantity":2,"unitPrice":49.99,"taxAmount":{},"shippingAmount":{},"warehouseLocation":"Aisle1,Bin7","options":[],"productId":11780610,"fulfillmentSku":"Ele-1234","adjustment":false,"upc":{},"createDate":"2015-08-17T09:24:14.78","modifyDate":"2015-08-17T09:24:14.78"},{"orderItemId":136282569,"lineItemKey":{},"sku":"CN-9876","name":"FineWhiteOakCane","imageUrl":{},"weight":{"value":80,"units":"ounces"},"quantity":1,"unitPrice":225,"taxAmount":{},"shippingAmount":{},"warehouseLocation":"Aisle7,Bin34","options":[],"productId":11780609,"fulfillmentSku":{},"adjustment":false,"upc":{},"createDate":"2015-08-17T09:24:14.78","modifyDate":"2015-08-17T09:24:14.78"}],"orderTotal":387.97,"amountPaid":412.97,"taxAmount":27.99,"shippingAmount":35,"customerNotes":"Pleasebecarefulwhenpackingthedisguisekitsinwiththecane.","internalNotes":"Mr.Holmescalledtoupgradehisshippingtoexpedited","gift":false,"giftMessage":{},"paymentMethod":{},"requestedShippingService":"PriorityMailInt","carrierCode":"stamps_com","serviceCode":"usps_priority_mail_international","packageCode":"package","confirmation":"delivery","shipDate":"2015-04-25","holdUntilDate":{},"weight":{"value":104,"units":"ounces"},"dimensions":{"units":"inches","length":40,"width":7,"height":5},"insuranceOptions":{"provider":{},"insureShipment":false,"insuredValue":0},"internationalOptions":{"contents":"merchandise","customsItems":[{"customsItemId":11558268,"description":"FineWhiteOakCane","quantity":1,"value":225,"harmonizedTariffCode":{},"countryOfOrigin":"US"},{"customsItemId":11558267,"description":"ElementaryDisguiseKit","quantity":2,"value":49.99,"harmonizedTariffCode":{},"countryOfOrigin":"US"}],"nonDelivery":"return_to_sender"},"advancedOptions":{"warehouseId":98765,"nonMachinable":false,"saturdayDelivery":false,"containsAlcohol":false,"mergedOrSplit":false,"mergedIds":[],"parentId":{},"storeId":12345,"customField1":"SKU:CN-9876x1","customField2":"SKU:Ele-123x2","customField3":{},"source":{},"billToParty":{},"billToAccount":{},"billToPostalCode":{},"billToCountryCode":{}},"tagIds":{},"userId":{},"externallyFulfilled":false,"externallyFulfilledBy":{}},{"orderId":123456789,"orderNumber":"TEST-ORDER-API-DOCS","orderKey":"0f6bec18-9-4771-83aa-f392d84f4c74","orderDate":"2015-06-29T08:46:27.0000000","createDate":"2015-07-16T14:00:34.8230000","modifyDate":"2015-08-17T09:21:59.4430000","paymentDate":"2015-06-29T08:46:27.0000000","shipByDate":"2015-07-05T00:00:00.0000000","orderStatus":"awaiting_shipment","customerId":37701499,"customerUsername":"headhoncho@whitehouse.gov","customerEmail":"headhoncho@whitehouse.gov","billTo":{"name":"ThePresident","company":{},"street1":{},"street2":{},"street3":{},"city":{},"state":{},"postalCode":{},"country":{},"phone":{},"residential":{},"addressVerified":{}},"shipTo":{"name":"ThePresident","company":"USGovt","street1":"1600PennsylvaniaAve","street2":"OvalOffice","street3":{},"city":"Washington","state":"DC","postalCode":"20500","country":"US","phone":"555-555-5555","residential":false,"addressVerified":"Addressvalidationwarning"},"items":[{"orderItemId":128836912,"lineItemKey":"vd08-MSLbtx","sku":"ABC123","name":"Testitem#1","imageUrl":{},"weight":{"value":24,"units":"ounces"},"quantity":2,"unitPrice":99.99,"taxAmount":{},"shippingAmount":{},"warehouseLocation":"Aisle1,Bin7","options":[{"name":"Size","value":"Large"}],"productId":7239919,"fulfillmentSku":{},"adjustment":false,"upc":{},"createDate":"2015-07-16T14:00:34.823","modifyDate":"2015-07-16T14:00:34.823"},{"orderItemId":128836913,"lineItemKey":{},"sku":"DISCOUNTCODE","name":"10%OFF","imageUrl":{},"weight":{"value":0,"units":"ounces"},"quantity":1,"unitPrice":-20.55,"taxAmount":{},"shippingAmount":{},"warehouseLocation":{},"options":[],"productId":{},"fulfillmentSku":{},"adjustment":true,"upc":{},"createDate":"2015-07-16T14:00:34.823","modifyDate":"2015-07-16T14:00:34.823"}],"orderTotal":194.43,"amountPaid":218.73,"taxAmount":5,"shippingAmount":10,"customerNotes":"Pleaseshipassoonaspossible!","internalNotes":"Customercalledandwouldliketoupgradeshipping","gift":true,"giftMessage":"Thankyou!","paymentMethod":"CreditCard","requestedShippingService":"PriorityMail","carrierCode":"fedex","serviceCode":"fedex_home_delivery","packageCode":"package","confirmation":"delivery","shipDate":"2015-07-02","holdUntilDate":{},"weight":{"value":48,"units":"ounces"},"dimensions":{"units":"inches","length":7,"width":5,"height":6},"insuranceOptions":{"provider":"carrier","insureShipment":true,"insuredValue":200},"internationalOptions":{"contents":{},"customsItems":{},"nonDelivery":{}},"advancedOptions":{"warehouseId":98765,"nonMachinable":false,"saturdayDelivery":false,"containsAlcohol":false,"mergedOrSplit":false,"mergedIds":[],"parentId":{},"storeId":12345,"customField1":"Customdatathatyoucanaddtoanorder.SeeCustomField#2&#3formoreinfo!","customField2":"PerUIsettings,thisinformationcanappearonsomecarriersshippinglabels.Seelinkbelow","customField3":"https://help.shipstation.com/hc/en-us/articles/206639957","source":"Webstore","billToParty":{},"billToAccount":{},"billToPostalCode":{},"billToCountryCode":{}},"tagIds":{},"userId":{},"externallyFulfilled":false,"externallyFulfilledBy":{}}],"total":2,"page":1,"pages":0}';
     begin
         if not testMode then
@@ -181,17 +161,52 @@ codeunit 50001 "ShipStation Mgt."
         for Counter := 0 to OrdersJSArray.Count - 1 do begin
             OrdersJSArray.Get(Counter, OrderJSToken);
             JSObject := OrderJSToken.AsObject();
-            txtOrders := GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
-            if txtOrders = DocNo then begin
+
+            txtOrderNo := GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
+
+            if GetJSToken(JSObject, 'orderStatus').AsValue().AsText() = constOrderCancelled then
+                CreateListAsFilter(OrdersCancelled, txtOrderNo);
+
+            if txtOrderNo = DocNo then begin
                 // Fill Token from Order
                 if testMode then
                     Message('Counter - %1\JSText:\%2', Counter, FillValuesFromOrder(JSObject))
-                else
+                else begin
                     // Create Label to Order
-                    Connect2ShipStation(3, FillValuesFromOrder(JSObject));
-            end;
+                    JSText := Connect2ShipStation(3, FillValuesFromOrder(JSObject));
 
+                    if JSText <> '' then begin
+                        // Add Lable to Shipment
+                        jsLabelObject.ReadFrom(JSText);
+                        txtLabel := GetJSToken(jsLabelObject, 'labelData').AsValue().AsText();
+                        AddLabel2Shipment(txtLabel);
+                    end;
+                end;
+
+                CreateListAsFilter(OrdersListCreateLabel, txtOrderNo)
+            end else begin
+                CreateListAsFilter(notExistOrdersList, txtOrderNo);
+            end;
         end;
+
+        Message('Created Lable to Order(`s):\%1\\Order(`s) Cancelled:\%2\\Not Exist Order(`s) in ShipStation:\%3',
+            OrdersListCreateLabel, OrdersCancelled, notExistOrdersList);
+    end;
+
+    local procedure AddLabel2Shipment(_txtLabel: Text)
+    var
+        TempBlob: Record TempBlob;
+    begin
+        TempBlob.FromBase64String(_txtLabel);
+        // TempBlob.
+    end;
+
+    local procedure CreateListAsFilter(var _List: Text; _subString: Text)
+    begin
+        if _List = '' then
+            _List += _subString
+        else
+            _List += '|' + _subString;
     end;
 
     local procedure FillValuesFromOrder(_JSObject: JsonObject): Text
@@ -283,8 +298,8 @@ codeunit 50001 "ShipStation Mgt."
                 JSObjectLine.Add('imageUrl', '');
                 JSObjectLine.Add('weight', jsonWeightFromItem(_SL."No."));
                 JSObjectLine.Add('quantity', Decimal2Integer(_SL.Quantity));
-                JSObjectLine.Add('unitPrice', _SL."Unit Price");
-                JSObjectLine.Add('taxAmount', _SL."Amount Including VAT" - _SL.Amount);
+                JSObjectLine.Add('unitPrice', Round(_SL."Amount Including VAT" / _SL.Quantity, 0.01));
+                JSObjectLine.Add('taxAmount', Round((_SL."Amount Including VAT" - _SL.Amount) / _SL.Quantity, 0.01));
                 // JSObjectLine.Add('shippingAmount', 0);
                 JSObjectLine.Add('warehouseLocation', _SL."Location Code");
                 JSObjectLine.Add('productId', _SL."Line No.");
