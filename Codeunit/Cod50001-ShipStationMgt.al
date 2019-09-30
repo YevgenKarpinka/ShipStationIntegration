@@ -10,7 +10,7 @@ codeunit 50001 "ShipStation Mgt."
         testMode := _testMode;
     end;
 
-    procedure Connect2ShipStation(SPCode: Option " ",getOrder,createOrder,crateLabel; Body2Request: Text): Text
+    procedure Connect2ShipStation(SPCode: Option " ",getOrder,createOrder,crateLabel; Body2Request: Text; newURL: Text): Text
     var
         TempBlob: Record TempBlob;
         SourceParameters: Record "Source Parameters";
@@ -29,10 +29,12 @@ codeunit 50001 "ShipStation Mgt."
         end;
 
         RequestMessage.Method := Format(SourceParameters."FSp RestMethod");
-        RequestMessage.SetRequestUri(SourceParameters."FSp URL");
+        if newURL = '' then
+            RequestMessage.SetRequestUri(newURL)
+        else
+            RequestMessage.SetRequestUri(SourceParameters."FSp URL");
         RequestMessage.GetHeaders(Headers);
         Headers.Add('Accept', SourceParameters."FSp Accept");
-
         if (SourceParameters."FSp AuthorizationFrameworkType" = SourceParameters."FSp AuthorizationFrameworkType"::OAuth2)
             and (SourceParameters."FSp AuthorizationToken" <> '') then begin
             TempBlob.WriteAsText(SourceParameters."FSp AuthorizationToken", TextEncoding::Windows);
@@ -78,31 +80,160 @@ codeunit 50001 "ShipStation Mgt."
         OrderJSToken: JsonToken;
         Counter: Integer;
         txtOrders: Text;
+        txtCarrierCode: Text[50];
+        txtServiceCode: Text[100];
+        _SH: Record "Sales Header";
     begin
-        JSText := Connect2ShipStation(1, '');
-        if JSText = '' then Error('Connection to ShipStation API failed');
-        Message('Response Text - %1', JSText);
-
-        // JSText := JSLabelText; // for test
-        JSText := JSLabelText1; // for test
-
+        JSText := Connect2ShipStation(1, '', '');
+        if testMode then
+            // JSText := JSLabelText; // for test
+            JSText := JSLabelText1; // for test
         JSObject.ReadFrom(JSText);
-        // Message('Total Orders - %1', GetJSToken(JSObject, 'total').AsValue().AsText());
-
         OrdersJSArray := GetJSToken(JSObject, 'orders').AsArray();
-        // Message('Orders No - %1', OrdersJSArray.Count);
 
         for Counter := 0 to OrdersJSArray.Count - 1 do begin
             OrdersJSArray.Get(Counter, OrderJSToken);
             JSObject := OrderJSToken.AsObject();
-            if txtOrders = '' then
-                txtOrders := GetJSToken(JSObject, 'orderNumber').AsValue().AsText()
-            else
-                txtOrders += '|' + GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
+            txtOrders := GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
+            if _SH.Get(_SH."Document Type"::Order, txtOrders) then begin
+                txtCarrierCode := CopyStr(GetJSToken(JSObject, 'carrierCode').AsValue().AsText(), 1, MaxStrLen(txtCarrierCode));
+                txtServiceCode := CopyStr(GetJSToken(JSObject, 'serviceCode').AsValue().AsText(), 1, MaxStrLen(txtServiceCode));
+
+                _SH."ShipStation Order ID" := GetJSToken(JSObject, 'orderId').AsValue().AsInteger();
+                _SH."ShipStation Order Key" := GetJSToken(JSObject, 'orderKey').AsValue().AsText();
+                _SH."Shipping Agent Code" := GetShippingAgent(txtCarrierCode);
+                _SH."Shipping Agent Service Code" := GetShippingAgentService(txtServiceCode, txtCarrierCode);
+                _SH."ShipStation Order Status" := _SH."ShipStation Order Status"::Received;
+                _SH.Modify();
+
+                if txtOrders = '' then
+                    txtOrders := GetJSToken(JSObject, 'orderNumber').AsValue().AsText()
+                else
+                    txtOrders += '|' + GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
+            end;
+
         end;
         Message('List of Orders No:\ %1', txtOrders);
 
         exit(txtOrders);
+    end;
+
+    procedure GetOrderFromShipStation(): Text
+    var
+        JSText: Text;
+        JSObject: JsonObject;
+        OrdersJSArray: JsonArray;
+        JSLabelText: Label '{"orders":[{"orderNumber":"Test-International-API-DOCS1"},{"orderNumber":"Test-International-API-DOCS2"},{"orderNumber":"Test-International-API-DOCS3"},{"orderNumber":"Test-International-API-DOCS4"}],"total":4,"page":1,"pages":1}';
+        JSLabelText1: Label '{"orders":[{"orderId":987654321,"orderNumber":"Test-International-API-DOCS","orderKey":"Test-International-API-DOCS","orderDate":"2015-06-28T17:46:27.0000000","createDate":"2015-08-17T09:24:14.7800000","modifyDate":"2015-08-17T09:24:16.4800000","paymentDate":"2015-06-28T17:46:27.0000000","shipByDate":"2015-07-05T00:00:00.0000000","orderStatus":"awaiting_shipment","customerId":63310475,"customerUsername":"sholmes1854@methodsofdetection.com","customerEmail":"sholmes1854@methodsofdetection.com","billTo":{"name":"SherlockHolmes","company":null,"street1":null,"street2":null,"street3":null,"city":null,"state":null,"postalCode":null,"country":null,"phone":null,"residential":null,"addressVerified":null},"shipTo":{"name":"SherlockHolmes","company":"","street1":"221BBakerSt","street2":"","street3":null,"city":"London","state":"","postalCode":"NW16XE","country":"GB","phone":null,"residential":true,"addressVerified":"Addressnotyetvalidated"},"items":[{"orderItemId":136282568,"lineItemKey":null,"sku":"Ele-1234","name":"ElementaryDisguiseKit","imageUrl":null,"weight":{"value":12,"units":"ounces"},"quantity":2,"unitPrice":49.99,"taxAmount":null,"shippingAmount":null,"warehouseLocation":"Aisle1,Bin7","options":[],"productId":11780610,"fulfillmentSku":"Ele-1234","adjustment":false,"upc":null,"createDate":"2015-08-17T09:24:14.78","modifyDate":"2015-08-17T09:24:14.78"},{"orderItemId":136282569,"lineItemKey":null,"sku":"CN-9876","name":"FineWhiteOakCane","imageUrl":null,"weight":{"value":80,"units":"ounces"},"quantity":1,"unitPrice":225,"taxAmount":null,"shippingAmount":null,"warehouseLocation":"Aisle7,Bin34","options":[],"productId":11780609,"fulfillmentSku":null,"adjustment":false,"upc":null,"createDate":"2015-08-17T09:24:14.78","modifyDate":"2015-08-17T09:24:14.78"}],"orderTotal":387.97,"amountPaid":412.97,"taxAmount":27.99,"shippingAmount":35,"customerNotes":"Pleasebecarefulwhenpackingthedisguisekitsinwiththecane.","internalNotes":"Mr.Holmescalledtoupgradehisshippingtoexpedited","gift":false,"giftMessage":null,"paymentMethod":null,"requestedShippingService":"PriorityMailInt","carrierCode":"stamps_com","serviceCode":"usps_priority_mail_international","packageCode":"package","confirmation":"delivery","shipDate":"2015-04-25","holdUntilDate":null,"weight":{"value":104,"units":"ounces"},"dimensions":{"units":"inches","length":40,"width":7,"height":5},"insuranceOptions":{"provider":null,"insureShipment":false,"insuredValue":0},"internationalOptions":{"contents":"merchandise","customsItems":[{"customsItemId":11558268,"description":"FineWhiteOakCane","quantity":1,"value":225,"harmonizedTariffCode":null,"countryOfOrigin":"US"},{"customsItemId":11558267,"description":"ElementaryDisguiseKit","quantity":2,"value":49.99,"harmonizedTariffCode":null,"countryOfOrigin":"US"}],"nonDelivery":"return_to_sender"},"advancedOptions":{"warehouseId":98765,"nonMachinable":false,"saturdayDelivery":false,"containsAlcohol":false,"mergedOrSplit":false,"mergedIds":[],"parentId":null,"storeId":12345,"customField1":"SKU:CN-9876x1","customField2":"SKU:Ele-123x2","customField3":null,"source":null,"billToParty":null,"billToAccount":null,"billToPostalCode":null,"billToCountryCode":null},"tagIds":null,"userId":null,"externallyFulfilled":false,"externallyFulfilledBy":null},{"orderId":123456789,"orderNumber":"TEST-ORDER-API-DOCS","orderKey":"0f6bec18-9-4771-83aa-f392d84f4c74","orderDate":"2015-06-29T08:46:27.0000000","createDate":"2015-07-16T14:00:34.8230000","modifyDate":"2015-08-17T09:21:59.4430000","paymentDate":"2015-06-29T08:46:27.0000000","shipByDate":"2015-07-05T00:00:00.0000000","orderStatus":"awaiting_shipment","customerId":37701499,"customerUsername":"headhoncho@whitehouse.gov","customerEmail":"headhoncho@whitehouse.gov","billTo":{"name":"ThePresident","company":null,"street1":null,"street2":null,"street3":null,"city":null,"state":null,"postalCode":null,"country":null,"phone":null,"residential":null,"addressVerified":null},"shipTo":{"name":"ThePresident","company":"USGovt","street1":"1600PennsylvaniaAve","street2":"OvalOffice","street3":null,"city":"Washington","state":"DC","postalCode":"20500","country":"US","phone":"555-555-5555","residential":false,"addressVerified":"Addressvalidationwarning"},"items":[{"orderItemId":128836912,"lineItemKey":"vd08-MSLbtx","sku":"ABC123","name":"Testitem#1","imageUrl":null,"weight":{"value":24,"units":"ounces"},"quantity":2,"unitPrice":99.99,"taxAmount":null,"shippingAmount":null,"warehouseLocation":"Aisle1,Bin7","options":[{"name":"Size","value":"Large"}],"productId":7239919,"fulfillmentSku":null,"adjustment":false,"upc":null,"createDate":"2015-07-16T14:00:34.823","modifyDate":"2015-07-16T14:00:34.823"},{"orderItemId":128836913,"lineItemKey":null,"sku":"DISCOUNTCODE","name":"10%OFF","imageUrl":null,"weight":{"value":0,"units":"ounces"},"quantity":1,"unitPrice":-20.55,"taxAmount":null,"shippingAmount":null,"warehouseLocation":null,"options":[],"productId":null,"fulfillmentSku":null,"adjustment":true,"upc":null,"createDate":"2015-07-16T14:00:34.823","modifyDate":"2015-07-16T14:00:34.823"}],"orderTotal":194.43,"amountPaid":218.73,"taxAmount":5,"shippingAmount":10,"customerNotes":"Pleaseshipassoonaspossible!","internalNotes":"Customercalledandwouldliketoupgradeshipping","gift":true,"giftMessage":"Thankyou!","paymentMethod":"CreditCard","requestedShippingService":"PriorityMail","carrierCode":"fedex","serviceCode":"fedex_home_delivery","packageCode":"package","confirmation":"delivery","shipDate":"2015-07-02","holdUntilDate":null,"weight":{"value":48,"units":"ounces"},"dimensions":{"units":"inches","length":7,"width":5,"height":6},"insuranceOptions":{"provider":"carrier","insureShipment":true,"insuredValue":200},"internationalOptions":{"contents":null,"customsItems":null,"nonDelivery":null},"advancedOptions":{"warehouseId":98765,"nonMachinable":false,"saturdayDelivery":false,"containsAlcohol":false,"mergedOrSplit":false,"mergedIds":[],"parentId":null,"storeId":12345,"customField1":"Customdatathatyoucanaddtoanorder.SeeCustomField#2&#3formoreinfo!","customField2":"PerUIsettings,thisinformationcanappearonsomecarriersshippinglabels.Seelinkbelow","customField3":"https://help.shipstation.com/hc/en-us/articles/206639957","source":"Webstore","billToParty":null,"billToAccount":null,"billToPostalCode":null,"billToCountryCode":null},"tagIds":null,"userId":null,"externallyFulfilled":false,"externallyFulfilledBy":null}],"total":2,"page":1,"pages":0}';
+        OrderJSToken: JsonToken;
+        Counter: Integer;
+        txtOrders: Text;
+        txtCarrierCode: Text[50];
+        txtServiceCode: Text[100];
+        _SH: Record "Sales Header";
+    begin
+        JSText := Connect2ShipStation(1, '', '');
+        if testMode then
+            // JSText := JSLabelText; // for test
+            JSText := JSLabelText1; // for test
+        JSObject.ReadFrom(JSText);
+        OrdersJSArray := GetJSToken(JSObject, 'orders').AsArray();
+
+        for Counter := 0 to OrdersJSArray.Count - 1 do begin
+            OrdersJSArray.Get(Counter, OrderJSToken);
+            JSObject := OrderJSToken.AsObject();
+            txtOrders := GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
+            if _SH.Get(_SH."Document Type"::Order, txtOrders) then begin
+                txtCarrierCode := CopyStr(GetJSToken(JSObject, 'carrierCode').AsValue().AsText(), 1, MaxStrLen(txtCarrierCode));
+                txtServiceCode := CopyStr(GetJSToken(JSObject, 'serviceCode').AsValue().AsText(), 1, MaxStrLen(txtServiceCode));
+
+                _SH."ShipStation Order ID" := GetJSToken(JSObject, 'orderId').AsValue().AsInteger();
+                _SH."ShipStation Order Key" := GetJSToken(JSObject, 'orderKey').AsValue().AsText();
+                _SH."Shipping Agent Code" := GetShippingAgent(txtCarrierCode);
+                _SH."Shipping Agent Service Code" := GetShippingAgentService(txtServiceCode, txtCarrierCode);
+                _SH."ShipStation Order Status" := _SH."ShipStation Order Status"::Received;
+                _SH.Modify();
+
+                if txtOrders = '' then
+                    txtOrders := GetJSToken(JSObject, 'orderNumber').AsValue().AsText()
+                else
+                    txtOrders += '|' + GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
+            end;
+
+        end;
+        Message('List of Orders No:\ %1', txtOrders);
+
+        exit(txtOrders);
+    end;
+
+    local procedure GetShippingAgentService(_ServiceCode: Text[100]; _CarrierCode: Text[50]): Code[10]
+    var
+        _SAS: Record "Shipping Agent Services";
+    begin
+        _SAS.SetRange("Shipping Agent Code", _CarrierCode);
+        _SAS.SetRange(Description, _ServiceCode);
+        if not _SAS.FindSet(false, false) then begin
+            exit(CreateShippingAgentService(_ServiceCode, _CarrierCode))
+        end else
+            exit(_SAS.Code)
+    end;
+
+    local procedure CreateShippingAgentService(_ServiceCode: Text[100]; _CarrierCode: Text[50]): code[10]
+    var
+        _SAS: Record "Shipping Agent Services";
+    begin
+        with _SAS do begin
+            Init();
+            "Shipping Agent Code" := _CarrierCode;
+            Code := IncStr(GetLastShippingAgentServiceCode);
+            Description := _ServiceCode;
+            Insert();
+            exit(Code);
+        end;
+    end;
+
+    local procedure GetLastShippingAgentServiceCode(): Code[10]
+    var
+        _SAS: Record "Shipping Agent Services";
+        lblSASCode: Label 'SAS-001';
+    begin
+        if _SAS.IsEmpty then exit(lblSASCode);
+        _SAS.FindLast();
+        exit(_SAS.Code);
+    end;
+
+    local procedure GetShippingAgent(_CarrierName: Text[50]): Code[10]
+    var
+        _SA: Record "Shipping Agent";
+    begin
+        _SA.SetRange(Name, _CarrierName);
+        if not _SA.FindSet(false, false) then
+            exit(CreateShippingAgent(_CarrierName))
+        else
+            exit(_SA.Code)
+    end;
+
+    local procedure CreateShippingAgent(_CarrierName: Text[50]): code[10]
+    var
+        _SA: Record "Shipping Agent";
+    begin
+        with _SA do begin
+            Init();
+            _SA.Code := IncStr(GetLastShippingAgentCode);
+            _SA.Name := _CarrierName;
+            Insert();
+            exit(Code);
+        end;
+    end;
+
+    local procedure GetLastShippingAgentCode(): Code[10]
+    var
+        _SA: Record "Shipping Agent";
+        lblSACode: Label 'SA-001';
+    begin
+        if _SA.IsEmpty then exit(lblSACode);
+        _SA.FindLast();
+        exit(_SA.Code);
     end;
 
     procedure CreateOrderInShipStation(DocNo: Code[20]): Boolean
@@ -134,13 +265,14 @@ codeunit 50001 "ShipStation Mgt."
             Message(JSText);
             // JSText := txtTest;
         end;
-        Connect2ShipStation(2, JSText);
+        Connect2ShipStation(2, JSText, '');
 
     end;
 
     procedure CreateLabel2OrderInShipStation(DocNo: Code[20]): Boolean
     var
         _SH: Record "Sales Header";
+        SourceParameters: Record "Source Parameters";
         JSText: Text;
         txtOrderNo: Text;
         JSObject: JsonObject;
@@ -158,62 +290,61 @@ codeunit 50001 "ShipStation Mgt."
         txtTestLabel: Label '{"shipmentId":72513480,"shipmentCost":7.3,"insuranceCost":0,"trackingNumber":"248201115029520","labelData":"JVBERi0xLjQKJeLjz9MKMiAwIG9iago8PC9MZW5ndGggNjIvRmlsdGVyL0ZsYXRlRGVjb2RlPj5zdHJlYW0KeJwr5HIK4TI2UzC2NFMISeFyDeEK5CpUMFQwAEJDBV0jCz0LBV1jY0M9I4XkXAX9iDRDBZd8hUAuAEdGC7cKZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveFswIDAgMjg4IDQzMl0vUmVzb3VyY2VzPDwvUHJvY1NldCBbL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSV0vWE9iamVjdDw8L1hmMSAxIDAgUj4+Pj4vQ29udGVudHMgMiAwIFIvUGFyZW50","formData":null}';
         txtLabelBase64: Label 'JVBERi0xLjQKJeLjz9MKMiAwIG9iago8PC9MZW5ndGggNjIvRmlsdGVyL0ZsYXRlRGVjb2RlPj5zdHJlYW0KeJwr5HIK4TI2UzC2NFMISeFyDeEK5CpUMFQwAEJDBV0jCz0LBV1jY0M9I4XkXAX9iDRDBZd8hUAuAEdGC7cKZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveFswIDAgMjg4IDQzMl0vUmVzb3VyY2VzPDwvUHJvY1NldCBbL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSV0vWE9iamVjdDw8L1hmMSAxIDAgUj4+Pj4vQ29udGVudHMgMiAwIFIvUGFyZW50Li4uLg';
     begin
-        DocNo := 'TEST-ORDER-0001';
-        if DocNo <> 'TEST-ORDER-0001' then
-            if not testMode then
-                if (DocNo = '') or (not _SH.Get(_SH."Document Type"::Order, DocNo)) then exit(false);
+        // DocNo := 'TEST-ORDER-0001';
+        // if DocNo <> 'TEST-ORDER-0001' then
+        // if not testMode then
+        if (DocNo = '') or (not _SH.Get(_SH."Document Type"::Order, DocNo)) or (_SH."ShipStation Order ID" = 0) then exit(false);
 
+        SourceParameters.SetRange("FSp Event", 1);
+        SourceParameters.FindFirst();
         // Get Order from Shipstation to Fill Variables
-        JSText := Connect2ShipStation(1, '');
+        JSText := Connect2ShipStation(1, '', StrSubstNo('%1/%2', SourceParameters."FSp URL", _SH."ShipStation Order ID"));
         // if testMode then
         //     JSText := txtTest;
 
         JSObject.ReadFrom(JSText);
-        OrdersJSArray := GetJSToken(JSObject, 'orders').AsArray();
-        for Counter := 0 to OrdersJSArray.Count - 1 do begin
-            OrdersJSArray.Get(Counter, OrderJSToken);
-            JSObject := OrderJSToken.AsObject();
+        // OrdersJSArray := GetJSToken(JSObject, 'orders').AsArray();
+        // for Counter := 0 to OrdersJSArray.Count - 1 do begin
+        //     OrdersJSArray.Get(Counter, OrderJSToken);
+        //     JSObject := OrderJSToken.AsObject();
 
-            txtOrderNo := GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
+        txtOrderNo := GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
 
-            if GetJSToken(JSObject, 'orderStatus').AsValue().AsText() = constOrderCancelled then
-                CreateListAsFilter(OrdersCancelled, txtOrderNo);
+        // if GetJSToken(JSObject, 'orderStatus').AsValue().AsText() = constOrderCancelled then
+        //     CreateListAsFilter(OrdersCancelled, txtOrderNo);
 
-            if txtOrderNo = DocNo then begin
-                // Fill Token from Order
-                if testMode then begin
-                    Message('Counter - %1\JSText:\%2', Counter, FillValuesFromOrder(JSObject));
-                    JSText := txtTestLabel;
-                    jsLabelObject.ReadFrom(JSText);
-                    txtLabel := GetJSToken(jsLabelObject, 'labelData').AsValue().AsText();
-                    WhseShipDcoNo := '111';
-                    txtLabel := txtLabelBase64;
-                    AddLabel2Shipment(txtLabel, WhseShipDcoNo);
-                end else begin
-                    // Create Label to Order
-                    JSText := Connect2ShipStation(3, FillValuesFromOrder(JSObject));
-
-                    if JSText <> '' then begin
-                        if WarehouseSipmentExist(DocNo, WhseShipDcoNo) then begin
-                            // Add Lable to Shipment
-                            jsLabelObject.ReadFrom(JSText);
-                            txtLabel := GetJSToken(jsLabelObject, 'labelData').AsValue().AsText();
-                            AddLabel2Shipment(txtLabel, WhseShipDcoNo);
-                        end;
-                    end;
-                end;
-
-                CreateListAsFilter(OrdersListCreateLabel, txtOrderNo)
-            end else begin
-                CreateListAsFilter(notExistOrdersList, txtOrderNo);
+        // if txtOrderNo = DocNo then begin
+        // Fill Token from Order
+        if testMode then begin
+            Message('Counter - %1\JSText:\%2', Counter, FillValuesFromOrder(JSObject));
+            JSText := txtTestLabel;
+            jsLabelObject.ReadFrom(JSText);
+            txtLabel := GetJSToken(jsLabelObject, 'labelData').AsValue().AsText();
+            WhseShipDcoNo := '111';
+            txtLabel := txtLabelBase64;
+            AddLabel2Shipment(txtLabel, WhseShipDcoNo);
+        end else begin
+            // Create Label to Order
+            JSText := Connect2ShipStation(3, FillValuesFromOrder(JSObject), '');
+            if JSText <> '' then begin
+                FindWarehouseSipment(DocNo, WhseShipDcoNo);
+                // Add Lable to Shipment
+                jsLabelObject.ReadFrom(JSText);
+                txtLabel := GetJSToken(jsLabelObject, 'labelData').AsValue().AsText();
+                AddLabel2Shipment(txtLabel, WhseShipDcoNo);
             end;
         end;
-
-        Message('Created Lable to Order(`s):\%1\\Order(`s) Cancelled:\%2\\Not Exist Order(`s) in ShipStation:\%3',
-            OrdersListCreateLabel, OrdersCancelled, notExistOrdersList);
+        Message('Label Created!');
+        // CreateListAsFilter(OrdersListCreateLabel, txtOrderNo)
+        // end else begin
+        //     CreateListAsFilter(notExistOrdersList, txtOrderNo);
+        // end;
+        // end;
+        // Message('Created Lable to Order(`s):\%1\\Order(`s) Cancelled:\%2\\Not Exist Order(`s) in ShipStation:\%3',
+        //     OrdersListCreateLabel, OrdersCancelled, notExistOrdersList);
     end;
 
-    local procedure WarehouseSipmentExist(_DocNo: Code[20]; var _WhseShipDcoNo: Code[20]): Boolean
+    local procedure FindWarehouseSipment(_DocNo: Code[20]; var _WhseShipDcoNo: Code[20])
     var
         WhseShipLine: Record "Warehouse Shipment Line";
     begin
@@ -221,12 +352,9 @@ codeunit 50001 "ShipStation Mgt."
             SetRange("Source Type", Database::"Sales Header");
             SetRange("Source Subtype", 1);
             SetRange("Source No.", _DocNo);
-            if FindSet(false, false) then begin
-                _WhseShipDcoNo := "No.";
-                exit(true);
-            end;
+            FindSet(false, false);
+            _WhseShipDcoNo := "No.";
         end;
-        exit(false);
     end;
 
     local procedure AddLabel2Shipment(_txtLabelBase64: Text; _WhseShipDocNo: Code[20])
