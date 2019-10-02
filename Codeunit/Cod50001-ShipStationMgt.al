@@ -352,7 +352,7 @@ codeunit 50001 "ShipStation Mgt."
             SetRange("Source Type", Database::"Sales Header");
             SetRange("Source Subtype", 1);
             SetRange("Source No.", _DocNo);
-            FindSet(false, false);
+            FindFirst();
             _WhseShipDcoNo := "No.";
         end;
     end;
