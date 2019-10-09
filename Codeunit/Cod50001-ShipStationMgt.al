@@ -290,30 +290,18 @@ codeunit 50001 "ShipStation Mgt."
         txtTestLabel: Label '{"shipmentId":72513480,"shipmentCost":7.3,"insuranceCost":0,"trackingNumber":"248201115029520","labelData":"JVBERi0xLjQKJeLjz9MKMiAwIG9iago8PC9MZW5ndGggNjIvRmlsdGVyL0ZsYXRlRGVjb2RlPj5zdHJlYW0KeJwr5HIK4TI2UzC2NFMISeFyDeEK5CpUMFQwAEJDBV0jCz0LBV1jY0M9I4XkXAX9iDRDBZd8hUAuAEdGC7cKZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveFswIDAgMjg4IDQzMl0vUmVzb3VyY2VzPDwvUHJvY1NldCBbL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSV0vWE9iamVjdDw8L1hmMSAxIDAgUj4+Pj4vQ29udGVudHMgMiAwIFIvUGFyZW50","formData":null}';
         txtLabelBase64: Label 'JVBERi0xLjQKJeLjz9MKMiAwIG9iago8PC9MZW5ndGggNjIvRmlsdGVyL0ZsYXRlRGVjb2RlPj5zdHJlYW0KeJwr5HIK4TI2UzC2NFMISeFyDeEK5CpUMFQwAEJDBV0jCz0LBV1jY0M9I4XkXAX9iDRDBZd8hUAuAEdGC7cKZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveFswIDAgMjg4IDQzMl0vUmVzb3VyY2VzPDwvUHJvY1NldCBbL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSV0vWE9iamVjdDw8L1hmMSAxIDAgUj4+Pj4vQ29udGVudHMgMiAwIFIvUGFyZW50Li4uLg';
     begin
-        // DocNo := 'TEST-ORDER-0001';
-        // if DocNo <> 'TEST-ORDER-0001' then
-        // if not testMode then
         if (DocNo = '') or (not _SH.Get(_SH."Document Type"::Order, DocNo)) or (_SH."ShipStation Order ID" = 0) then exit(false);
 
         SourceParameters.SetRange("FSp Event", 1);
         SourceParameters.FindFirst();
+
         // Get Order from Shipstation to Fill Variables
         JSText := Connect2ShipStation(1, '', StrSubstNo('%1/%2', SourceParameters."FSp URL", _SH."ShipStation Order ID"));
-        // if testMode then
-        //     JSText := txtTest;
 
         JSObject.ReadFrom(JSText);
-        // OrdersJSArray := GetJSToken(JSObject, 'orders').AsArray();
-        // for Counter := 0 to OrdersJSArray.Count - 1 do begin
-        //     OrdersJSArray.Get(Counter, OrderJSToken);
-        //     JSObject := OrderJSToken.AsObject();
 
         txtOrderNo := GetJSToken(JSObject, 'orderNumber').AsValue().AsText();
 
-        // if GetJSToken(JSObject, 'orderStatus').AsValue().AsText() = constOrderCancelled then
-        //     CreateListAsFilter(OrdersCancelled, txtOrderNo);
-
-        // if txtOrderNo = DocNo then begin
         // Fill Token from Order
         if testMode then begin
             Message('Counter - %1\JSText:\%2', Counter, FillValuesFromOrder(JSObject));
@@ -335,13 +323,6 @@ codeunit 50001 "ShipStation Mgt."
             end;
         end;
         Message('Label Created!');
-        // CreateListAsFilter(OrdersListCreateLabel, txtOrderNo)
-        // end else begin
-        //     CreateListAsFilter(notExistOrdersList, txtOrderNo);
-        // end;
-        // end;
-        // Message('Created Lable to Order(`s):\%1\\Order(`s) Cancelled:\%2\\Not Exist Order(`s) in ShipStation:\%3',
-        //     OrdersListCreateLabel, OrdersCancelled, notExistOrdersList);
     end;
 
     local procedure FindWarehouseSipment(_DocNo: Code[20]; var _WhseShipDcoNo: Code[20])
