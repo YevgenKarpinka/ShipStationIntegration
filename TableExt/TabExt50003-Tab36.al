@@ -19,6 +19,12 @@ tableextension 50003 "Sales Header Ext." extends "Sales Header"
             CaptionML = ENU = 'ShipStation Order Status', RUS = 'Статус Заказа ShipStation';
             Editable = false;
         }
+        field(50003; "ShipStation Status"; Text[50])
+        {
+            DataClassification = ToBeClassified;
+            CaptionML = ENU = 'ShipStation Status', RUS = 'Статус ShipStation';
+            Editable = false;
+        }
     }
 
     var
